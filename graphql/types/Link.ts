@@ -15,6 +15,7 @@ builder.prismaObject('Link', {
 
 builder.queryField("links", (t) =>
  
+  // this change i mad to set id for pagination
   t.prismaConnection({
  
     type: 'Link',
@@ -23,3 +24,57 @@ builder.queryField("links", (t) =>
       prisma.link.findMany({ ...query })
   })
 )
+
+builder.mutationField("createLink", (t) =>
+  t.prismaField({
+    type: 'Link',
+   
+    args: {
+      title: t.arg.string({ required: true }),
+      description: t.arg.string({ required: true }),
+      url: t.arg.string({ required: true }),
+      imageUrl: t.arg.string({ required: true }),
+      category: t.arg.string({ required: true }),
+    },
+    resolve: async (query, _parent, args, ctx) => {
+      const { title, description, url, imageUrl, category } = args;
+      if (!(await ctx).user) {
+        throw new Error("you have to be logged in to perform this action")
+
+      }
+      const user = await prisma.user.findUnique({
+        where: {
+          email: (await ctx).user?.email,
+        }
+      })
+
+      if (!user || user.role !== "ADMIN") {
+        throw new Error("You don have permission ot perform this action")
+      }
+      return prisma.link.create({
+        ...query,
+        data:{
+          title,
+          description,
+          url,
+          imageUrl,
+          category,
+        }
+
+      })
+    }
+   
+   })
+
+)
+// model Link {
+//   id          Int      @id @default(autoincrement())
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+//   title       String
+//   description String
+//   url         String
+//   imageUrl    String
+//   category    String
+//   users      User[]
+// }
